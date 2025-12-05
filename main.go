@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	WeatherClient "go_weather/api"
+	Presentation "go_weather/presentation"
 	"os"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -30,7 +31,8 @@ func main() {
 	}
 
 	Client := WeatherClient.NewClient(env.API_KEY, "http://api.openweathermap.org")
-	description, windSpeed, temp, err := Client.GetWeather("London", "gb")
+	weather, err := Client.GetWeather("London", "gb")
 
-	fmt.Print(description, windSpeed, temp)
+	formatted := Presentation.FormatWeather(weather)
+	fmt.Print(formatted)
 }

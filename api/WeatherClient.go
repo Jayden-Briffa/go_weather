@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	Model "go_weather/model"
 	"net/http"
 	"strings"
 )
@@ -50,7 +51,7 @@ func (c *Client) GetCityCoords(location string, country_code string) (float64, f
 	return city.Lat, city.Lon, err
 }
 
-func (c *Client) GetWeather(location string, country_code string) (string, float64, float64, error) {
+func (c *Client) GetWeather(location string, country_code string) (Model.Weather, error) {
 	lat, lon, err := c.GetCityCoords(location, country_code)
 
 	if err != nil {
@@ -84,13 +85,14 @@ func (c *Client) GetWeather(location string, country_code string) (string, float
 		panic("Error decoding weather response body")
 	}
 
-	description := data.Weather[0].Description
-	windSpeed := data.Wind.Speed
-	temp := data.Main.Temp
+	// description := data.Weather[0].Description
+	// windSpeed := data.Wind.Speed
+	// temp := data.Main.Temp
 
-	return description,
-		windSpeed,
-		temp,
-		err
+	var newWeather Model.Weather
+	newWeather.Description = data.Weather[0].Description
+	newWeather.WindSpeed = data.Wind.Speed
+	newWeather.Temp = data.Main.Temp
+	return newWeather, err
 
 }
