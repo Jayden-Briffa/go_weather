@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	Model "go_weather/model"
+	Presentation "go_weather/presentation"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type Client struct {
@@ -20,8 +22,8 @@ func NewClient(apiKey string, domain string) *Client {
 	}
 }
 
-func (c *Client) GetCityCoords(location string, country_code string) (float64, float64, error) {
-	url := fmt.Sprintf("%s/geo/1.0/direct?q=%s,%s&limit=1&appid=%s", c.domain, location, country_code, c.apiKey)
+func (c *Client) GetCityCoords(city string, country_code string) (float64, float64, error) {
+	url := fmt.Sprintf("%s/geo/1.0/direct?q=%s,%s&limit=1&appid=%s", c.domain, city, country_code, c.apiKey)
 	res, err := http.Get(url)
 
 	if err != nil {
@@ -42,17 +44,17 @@ func (c *Client) GetCityCoords(location string, country_code string) (float64, f
 		return 0, 0, err
 	}
 
-	city := data[0]
+	weather := data[0]
 
-	if !strings.EqualFold(city.Name, location) || !strings.EqualFold(city.Country, country_code) {
+	if !strings.EqualFold(weather.Name, city) || !strings.EqualFold(weather.Country, country_code) {
 		panic("Could not find the city which was requested")
 	}
 
-	return city.Lat, city.Lon, err
+	return weather.Lat, weather.Lon, err
 }
 
-func (c *Client) GetWeather(location string, country_code string) (Model.Weather, error) {
-	lat, lon, err := c.GetCityCoords(location, country_code)
+func (c *Client) GetWeather(city Model.City) (Model.Weather, error) {
+	lat, lon, err := c.GetCityCoords(city.Name, city.Country_code)
 
 	if err != nil {
 		panic("Error getting city coordinates")
@@ -85,14 +87,34 @@ func (c *Client) GetWeather(location string, country_code string) (Model.Weather
 		panic("Error decoding weather response body")
 	}
 
-	// description := data.Weather[0].Description
-	// windSpeed := data.Wind.Speed
-	// temp := data.Main.Temp
+	time.Sleep(600 * time.Millisecond)
 
-	var newWeather Model.Weather
-	newWeather.Description = data.Weather[0].Description
-	newWeather.WindSpeed = data.Wind.Speed
-	newWeather.Temp = data.Main.Temp
-	return newWeather, err
+	return Model.Weather{
+		Description: data.Weather[0].Description,
+		WindSpeed:   data.Wind.Speed,
+		Temp:        data.Main.Temp,
+		City:        city,
+	}, err
+}
 
+func (client *Client) StreamWeather(cities []Model.City) error {
+
+	for range 100 {
+		var citiesWeather string
+		for _, city := range cities {
+			weather, err := client.GetWeather(city)
+
+			if err != nil {
+				panic(fmt.Sprintf("Error getting weather for %v, %v: %v", city.Name, city.Country_code, err))
+			}
+
+			citiesWeather += Presentation.FormatWeather(weather)
+			citiesWeather += " // "
+		}
+
+		fmt.Println(citiesWeather)
+		time.Sleep(1 * time.Second)
+	}
+
+	return nil
 }

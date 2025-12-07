@@ -1,9 +1,8 @@
 package main
 
 import (
-	"fmt"
-	WeatherClient "go_weather/api"
-	Presentation "go_weather/presentation"
+	Api "go_weather/api"
+	Data "go_weather/data"
 	"os"
 
 	_ "github.com/joho/godotenv/autoload"
@@ -12,8 +11,6 @@ import (
 type Env struct {
 	API_KEY string
 }
-
-// func get_coords(location string)
 
 func load_env() (*Env, error) {
 	cfg := &Env{
@@ -30,9 +27,9 @@ func main() {
 		panic("Error loading environment")
 	}
 
-	Client := WeatherClient.NewClient(env.API_KEY, "http://api.openweathermap.org")
-	weather, err := Client.GetWeather("London", "gb")
+	client := Api.NewClient(env.API_KEY, "http://api.openweathermap.org")
 
-	formatted := Presentation.FormatWeather(weather)
-	fmt.Print(formatted)
+	cities := Data.Cities
+
+	client.StreamWeather(cities)
 }
