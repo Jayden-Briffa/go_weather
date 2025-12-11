@@ -116,13 +116,8 @@ func (client *Client) StreamWeather(cities []Model.City) {
 		var wg sync.WaitGroup
 		ch := make(chan Model.Weather)
 
-		wg.Add(len(cities))
 		for _, city := range cities {
-
-			go func() {
-				defer wg.Done()
-				go client.GetWeatherAsync(city, ch)
-			}()
+			wg.Go(func() {client.GetWeatherAsync(city, ch)})
 		}
 
 		go func() {
