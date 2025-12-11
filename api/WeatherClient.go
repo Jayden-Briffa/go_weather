@@ -7,6 +7,7 @@ import (
 	Presentation "go_weather/presentation"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -64,7 +65,7 @@ func (c *Client) GetWeather(city Model.City) (Model.Weather, error) {
 	res, err := http.Get(url)
 
 	if err != nil {
-		panic("Error getting weather response")
+		return Model.Weather{}, err
 	}
 
 	defer res.Body.Close()
@@ -97,24 +98,40 @@ func (c *Client) GetWeather(city Model.City) (Model.Weather, error) {
 	}, err
 }
 
-func (client *Client) StreamWeather(cities []Model.City) error {
+func (client *Client) GetWeatherAsync(city Model.City, ch chan Model.Weather){
+	weather, err := client.GetWeather(city)
 
-	for range 100 {
-		var citiesWeather string
+	if err != nil {
+		fmt.Printf("Error getting weather for %v, %v: %v\n", city.Name, city.Country_code, err)
+	}
+
+	ch<-weather
+}
+
+func (client *Client) StreamWeather(cities []Model.City) {
+	i := 0
+	for {
+		i++
+
+		var wg sync.WaitGroup
+		ch := make(chan Model.Weather)
+
 		for _, city := range cities {
-			weather, err := client.GetWeather(city)
+			wg.Go(func() {client.GetWeatherAsync(city, ch)})
+		}
 
-			if err != nil {
-				panic(fmt.Sprintf("Error getting weather for %v, %v: %v", city.Name, city.Country_code, err))
-			}
+		go func() {
+			wg.Wait()
+			close(ch)
+		}()
 
+		var citiesWeather string
+		for weather := range ch {
 			citiesWeather += Presentation.FormatWeather(weather)
 			citiesWeather += " // "
 		}
 
-		fmt.Println(citiesWeather)
+		fmt.Printf("%v: %v\r", i, citiesWeather)
 		time.Sleep(1 * time.Second)
 	}
-
-	return nil
 }
